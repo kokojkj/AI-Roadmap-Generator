@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Roadmap Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .input-group {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        #topicInput {
+            flex-grow: 1;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px 0 0 4px;
+        }
+        #generateBtn {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 0 4px 4px 0;
+            transition: background-color 0.3s ease;
+        }
+        #generateBtn:hover {
+            background-color: #0056b3;
+        }
+        #generateBtn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #roadmapOutput {
+            margin-top: 20px;
+        }
+        .roadmap-stage {
+            background-color: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .roadmap-stage h3 {
+            margin-top: 0;
+            color: #333;
+            font-size: 1.2em;
+        }
+        .roadmap-stage h4 {
+            color: #555;
+            margin-bottom: 10px;
+        }
+        .roadmap-stage ul {
+            padding-left: 20px;
+            margin-top: 5px;
+        }
+        .project-ideas {
+            background-color: #e9ecef;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin-top: 10px;
+        }
+        #errorMessage {
+            color: red;
+            margin-bottom: 20px;
+        }
+        #loadingIndicator {
+            text-align: center;
+            color: #007bff;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AI Roadmap Generator</h1>
+        <div class="input-group">
+            <input 
+                type="text" 
+                id="topicInput" 
+                placeholder="Enter a learning topic (e.g., Web Development)"
+            >
+            <button id="generateBtn">Generate Roadmap</button>
+        </div>
+        <div id="errorMessage"></div>
+        <div id="loadingIndicator">Generating Roadmap...</div>
+        <div id="roadmapOutput"></div>
+    </div>
+
+    <script>
+        const OPENAI_API_KEY = 'O3K0TTLOX0BSVS08VALE9LU762YT7JM53TW8XQDJOSTN13MAFEYXDCIVLD5HX51K';
+
+        const topicInput = document.getElementById('topicInput');
+        const generateBtn = document.getElementById('generateBtn');
+        const errorMessage = document.getElementById('errorMessage');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const roadmapOutput = document.getElementById('roadmapOutput');
+
+        async function generateRoadmap(topic) {
+            errorMessage.textContent = '';
+            roadmapOutput.innerHTML = '';
+            loadingIndicator.style.display = 'block';
+            generateBtn.disabled = true;
+
+            try {
+                const response = await fetch('https://jamsapi.hackclub.dev/openai/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${OPENAI_API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: "gpt-4o",
+                        messages: [
+                            {
+                                role: "system", 
+                                content: "You are a helpful assistant that creates comprehensive learning roadmaps with both learning objectives and practical project ideas. Provide a detailed roadmap with 3-4 stages of learning and specific project suggestions for each stage."
+                            },
+                            {
+                                role: "user", 
+                                content: `Create a comprehensive learning roadmap for ${topic}. Break it down into clear stages with specific learning objectives and milestones. For each stage, include:
+                                1. Key learning points or actions
+                                2. 2-3 practical project ideas that reinforce the stage's learning objectives
+                                3. Difficulty level for each project
+                                Format your response clearly and concisely.
+								dont add any * in project ideas`
+                            }
+                        ],
+                        temperature: 0.7,
+                        max_tokens: 1000
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error.message || 'Failed to generate roadmap');
+                }
+
+                const data = await response.json();
+                const roadmapText = data.choices[0].message.content;
+
+                displayRoadmap(topic, roadmapText);
+            } catch (error) {
+                errorMessage.textContent = `Error: ${error.message}`;
+            } finally {
+                loadingIndicator.style.display = 'none';
+                generateBtn.disabled = false;
+            }
+        }
+
+        function displayRoadmap(topic, roadmapText) {
+    roadmapOutput.innerHTML = `<h2>Roadmap for ${topic}</h2>`;
+
+    const stageRegex = /Stage\s*\d+:\s*(.+?)(?=Stage\s*\d+:|$)/gs;
+    const matches = [...roadmapText.matchAll(stageRegex)];
+
+    if (matches.length === 0) {
+        const fallbackDiv = document.createElement('div');
+        fallbackDiv.textContent = roadmapText;
+        roadmapOutput.appendChild(fallbackDiv);
+        return;
+    }
+
+    matches.forEach((match, index) => {
+        const stageContent = match[1];
+        
+        const stageDiv = document.createElement('div');
+        stageDiv.className = 'roadmap-stage';
+
+        const lines = stageContent.split('\n')
+            .map(line => line.trim().replace(/\*/g, ''))
+            .filter(line => line);
+
+        const stageHeader = document.createElement('h3');
+        stageHeader.textContent = `Stage ${index + 1}: ${lines[0]}`;
+        stageDiv.appendChild(stageHeader);
+
+        const learningObjectivesContainer = document.createElement('div');
+        const projectIdeasContainer = document.createElement('div');
+        
+        const learningObjectivesHeader = document.createElement('h4');
+        learningObjectivesHeader.textContent = 'Learning Objectives';
+        learningObjectivesContainer.appendChild(learningObjectivesHeader);
+
+        const projectIdeasHeader = document.createElement('h4');
+        projectIdeasHeader.textContent = 'Project Ideas';
+        projectIdeasContainer.className = 'project-ideas';
+        projectIdeasContainer.appendChild(projectIdeasHeader);
+
+        const learningObjectivesList = document.createElement('ul');
+        const projectIdeasList = document.createElement('ul');
+
+        let currentSection = 'learning';
+
+        lines.slice(1).forEach(line => {
+            if (line.toLowerCase().includes('project ideas')) {
+                currentSection = 'projects';
+                return;
+            }
+
+            if (line.startsWith('-')) {
+                const cleanLine = line.replace(/^-\s*/, '');
+                const listItem = document.createElement('li');
+                listItem.textContent = cleanLine;
+
+                if (currentSection === 'learning') {
+                    learningObjectivesList.appendChild(listItem);
+                } else {
+                    projectIdeasList.appendChild(listItem);
+                }
+            }
+        });
+
+        if (learningObjectivesList.children.length > 0) {
+            learningObjectivesContainer.appendChild(learningObjectivesList);
+            stageDiv.appendChild(learningObjectivesContainer);
+        }
+        if (projectIdeasList.children.length > 0) {
+            projectIdeasContainer.appendChild(projectIdeasList);
+            stageDiv.appendChild(projectIdeasContainer);
+        }
+
+        roadmapOutput.appendChild(stageDiv);
+    });
+}
+
+        generateBtn.addEventListener('click', () => {
+            const topic = topicInput.value.trim();
+            if (topic) {
+                generateRoadmap(topic);
+            } else {
+                errorMessage.textContent = 'Please enter a topic';
+            }
+        });
+
+        topicInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                generateBtn.click();
+            }
+        });
+    </script>
+</body>
+</html>
