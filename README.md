@@ -4,3 +4,5 @@ with learning objectives and project ideas to do
 check it out :https://kokojkj.github.io/AI-Roadmap-Generator/
 note that 
 i know that my api key is revealed and i will revoke it after getting my doublons
+
+also this project is done with some ai help to enhance the prompt and making formatting more polished
